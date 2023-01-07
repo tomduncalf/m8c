@@ -5,12 +5,12 @@ OBJ = main.o serial.o slip.o command.o write.o render.o ini.o config.o input.o f
 DEPS = serial.h slip.h command.h write.h render.h ini.h config.h input.h fx_cube.h
 
 #Any special libraries you are using in your project (e.g. -lbcm2835 -lrt `pkg-config --libs gtk+-3.0` ), or leave blank
-INCLUDES = $(shell pkg-config --libs sdl2 libserialport)
+INCLUDES = $(shell pkg-config --libs sdl2 libserialport rtmidi)
 
 
 
 #Set any compiler flags you want to use (e.g. -I/usr/include/somefolder `pkg-config --cflags gtk+-3.0` ), or leave blank
-local_CFLAGS = $(CFLAGS) $(shell pkg-config --cflags sdl2 libserialport) -Wall -O2 -pipe -I.
+local_CFLAGS = $(CFLAGS) $(shell pkg-config --cflags sdl2 libserialport rtmidi) -Wall -O2 -pipe -I.
 
 #Set the compiler you are using ( gcc for C or g++ for C++ )
 CC = gcc

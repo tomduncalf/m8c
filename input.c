@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <rtmidi_c.h>
 
 #include "config.h"
 #include "input.h"
@@ -43,6 +44,8 @@ static uint16_t prev_keycode = 0; // value of the pressed key
 static int num_joysticks = 0;
 
 input_msg_s key = {normal, 0};
+
+const char *port_name = "whatever";
 
 uint8_t toggle_input_keyjazz() {
   keyjazz_enabled = !keyjazz_enabled;
@@ -538,12 +541,25 @@ input_msg_s get_input_msg(config_params_s *conf) {
     }
 
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
-      gamepad_keyjazz_key_active = true;
-      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
+      RtMidiOutPtr dev = rtmidi_out_create_default();
+      rtmidi_open_port (dev, 1, port_name);
+      const unsigned char msg[3] = {0x90, 0x3C, 0xFF};
+      rtmidi_out_send_message(dev, msg, 3);
+      // printf("midi %i\n", rtmidi_get_port_count(dev));
+      // for (int i = 0; i < rtmidi_get_port_count(dev); i++) {
+      //   char name[100];
+      //   int len = 100;
+      //   rtmidi_get_port_name(dev, i, name, &len);
+      //   printf("midi %i %s\n", i, name);
+      // }
+
+      // gamepad_keyjazz_key_active = true;
+      // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
-      gamepad_keyjazz_key_active = false;
-      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
+      // gamepad_keyjazz_key_active = false;
+      // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
     }
+    return (input_msg_s){special, -1};
   }
 
   if (gamepad_keyjazz_active) {

@@ -8,6 +8,8 @@
 #include <SDL.h>
 #include <libserialport.h>
 #include <signal.h>
+#include <rtmidi_c.h>
+#include <stdio.h>
 
 #include "command.h"
 #include "config.h"
@@ -35,6 +37,15 @@ void close_serial_port(struct sp_port *port) {
 }
 
 int main(int argc, char *argv[]) {
+  RtMidiOutPtr dev = rtmidi_out_create_default();
+  printf("midi %i\n", rtmidi_get_port_count(dev));
+  for (int i = 0; i < rtmidi_get_port_count(dev); i++) {
+    char name[100];
+    int len = 100;
+    rtmidi_get_port_name(dev, i, name, &len);
+    printf("midi %i %s\n", i, name);
+  }
+
   // Initialize the config to defaults read in the params from the
   // configfile if present
   config_params_s conf = init_config();
