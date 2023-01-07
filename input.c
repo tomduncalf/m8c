@@ -49,6 +49,7 @@ const char *port_name = "whatever";
 RtMidiOutPtr dev;
 int last_values[2] = {- 1, -1};
 int current_midi_values[2] = {64, 64};
+float current_midi_values_float[2] = {0.0f, 0.0f};
 int directions[2] = {0, 0};
 
 uint8_t toggle_input_keyjazz() {
@@ -319,10 +320,41 @@ static int get_game_controller_button(config_params_s *conf,
       if (value == 128) value = 127;
       if (i % 2 == 0) value = 127 - value;
 
-      if (value != last_values[i]) {
-        printf("%i %i\n", i, value);
+      printf("%i %i\n", i, value);
 
-        if (true) {
+      int mode = 0;
+      if (mode == 0) {
+        // relative mode 1
+        if (value >= 62 && value <= 66) {
+          // center zone
+          directions[i] = 0;
+        } else {
+          int difference = value - 64;
+
+          printf("difference: %i, direction: %i\n", difference, directions[i]);
+
+          if (directions[i] == 0) {
+            directions[i] = difference > 0 ? 1 : -1;
+          }
+
+          if ((difference > 0 ? 1 : -1) == directions[i]) {
+            current_midi_values_float[i] += ((float)difference / 1000);
+            if (current_midi_values_float[i] < 0) {
+              current_midi_values_float[i] = 0;
+            } else if (current_midi_values_float[i] > 127) {
+              current_midi_values_float[i] = 127;
+            }
+
+            if (round(current_midi_values_float[i]) != last_values[i]) {
+              last_values[i] = round(current_midi_values_float[i]);
+              const unsigned char msg[3] = {0xB0, i, round(current_midi_values_float[i])};
+              rtmidi_out_send_message(dev, msg, 3);
+            }
+          }
+        }
+      } else if (mode == 1) {
+        if (value != last_values[i]) {
+          // relative mode 2 - doesn't increase when held
           if (value >= 63 && value <= 65) {
             // center zone
             directions[i] = 0;
@@ -348,9 +380,14 @@ static int get_game_controller_button(config_params_s *conf,
               rtmidi_out_send_message(dev, msg, 3);
             }
           }
-          // if (abs(difference) > 2) {
-          // }
-        } else {
+        }
+      } else {
+        // absolute
+        if (value >= 62 && value <= 66) {
+          // center zone
+          value = 63;
+        }
+        if (value != last_values[i]) {
           printf("%i %i\n", i, value);
           last_values[i] = value;
 
