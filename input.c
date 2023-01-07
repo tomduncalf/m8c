@@ -523,6 +523,16 @@ input_msg_s get_input_msg(config_params_s *conf) {
       case key_opt:
         gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 12 + keyjazz_base_octave * 12;
         break;
+      case key_select:
+        if (keyjazz_base_octave > 0) {
+          keyjazz_base_octave--;
+        }
+        break;
+      case key_start:
+      if (keyjazz_base_octave < 8) {
+          keyjazz_base_octave++;
+        }
+        break;
       default:
         break;
     }
