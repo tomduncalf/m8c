@@ -46,6 +46,8 @@ static int num_joysticks = 0;
 input_msg_s key = {normal, 0};
 
 const char *port_name = "whatever";
+RtMidiOutPtr dev;
+int last_value = - 1;
 
 uint8_t toggle_input_keyjazz() {
   keyjazz_enabled = !keyjazz_enabled;
@@ -54,6 +56,8 @@ uint8_t toggle_input_keyjazz() {
 
 // Opens available game controllers and returns the amount of opened controllers
 int initialize_game_controllers() {
+  dev = rtmidi_out_create_default();
+  rtmidi_open_port (dev, 1, port_name);
 
   num_joysticks = SDL_NumJoysticks();
   int controller_index = 0;
@@ -307,43 +311,54 @@ static int get_game_controller_button(config_params_s *conf,
   if (SDL_GameControllerGetButton(controller, button_mappings[button])) {
     return 1;
   } else {
-    // If digital button isn't pressed, check the corresponding analog control
-    switch (button) {
-    case INPUT_UP:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_updown) <
-             -conf->gamepad_analog_threshold;
-    case INPUT_DOWN:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_updown) >
-             conf->gamepad_analog_threshold;
-    case INPUT_LEFT:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_leftright) <
-             -conf->gamepad_analog_threshold;
-    case INPUT_RIGHT:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_leftright) >
-             conf->gamepad_analog_threshold;
-    case INPUT_OPT:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_opt) >
-             conf->gamepad_analog_threshold;
-    case INPUT_EDIT:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_edit) >
-             conf->gamepad_analog_threshold;
-    case INPUT_SELECT:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_select) >
-             conf->gamepad_analog_threshold;
-    case INPUT_START:
-      return SDL_GameControllerGetAxis(controller,
-                                       conf->gamepad_analog_axis_start) >
-             conf->gamepad_analog_threshold;
-    default:
-      return 0;
+    unsigned int value = (0x8000 + SDL_GameControllerGetAxis(controller, conf->gamepad_analog_axis_updown)) / (0xffff / 0x80);
+    if (value == 128) value = 127;
+    value = 127 - value;
+
+    if (value != last_value) {
+      last_value = value;
+
+      const unsigned char msg[3] = {0xB0, 0, value};
+      rtmidi_out_send_message(dev, msg, 3);
     }
+
+    // If digital button isn't pressed, check the corresponding analog control
+    // switch (button) {
+    // case INPUT_UP:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_updown) <
+    //          -conf->gamepad_analog_threshold;
+    // case INPUT_DOWN:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_updown) >
+    //          conf->gamepad_analog_threshold;
+    // case INPUT_LEFT:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_leftright) <
+    //          -conf->gamepad_analog_threshold;
+    // case INPUT_RIGHT:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_leftright) >
+    //          conf->gamepad_analog_threshold;
+    // case INPUT_OPT:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_opt) >
+    //          conf->gamepad_analog_threshold;
+    // case INPUT_EDIT:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_edit) >
+    //          conf->gamepad_analog_threshold;
+    // case INPUT_SELECT:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_select) >
+    //          conf->gamepad_analog_threshold;
+    // case INPUT_START:
+    //   return SDL_GameControllerGetAxis(controller,
+    //                                    conf->gamepad_analog_axis_start) >
+    //          conf->gamepad_analog_threshold;
+    // default:
+    //   return 0;
+    // }
   }
   return 0;
 }
@@ -541,22 +556,16 @@ input_msg_s get_input_msg(config_params_s *conf) {
     }
 
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
-      RtMidiOutPtr dev = rtmidi_out_create_default();
-      rtmidi_open_port (dev, 1, port_name);
-      const unsigned char msg[3] = {0x90, 0x3C, 0xFF};
+      gamepad_keyjazz_key_active = true;
+      const unsigned char msg[3] = {0x90, gamepad_keyjazz_key, 0xFF};
       rtmidi_out_send_message(dev, msg, 3);
-      // printf("midi %i\n", rtmidi_get_port_count(dev));
-      // for (int i = 0; i < rtmidi_get_port_count(dev); i++) {
-      //   char name[100];
-      //   int len = 100;
-      //   rtmidi_get_port_name(dev, i, name, &len);
-      //   printf("midi %i %s\n", i, name);
-      // }
 
-      // gamepad_keyjazz_key_active = true;
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
-      // gamepad_keyjazz_key_active = false;
+      gamepad_keyjazz_key_active = false;
+      const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
+      rtmidi_out_send_message(dev, msg, 3);
+
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
     }
     return (input_msg_s){special, -1};
@@ -569,7 +578,10 @@ input_msg_s get_input_msg(config_params_s *conf) {
   // Avoid stuck notes
   if (gamepad_keyjazz_key_active) {
     gamepad_keyjazz_key_active = false;
-    return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
+    const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
+    rtmidi_out_send_message(dev, msg, 3);
+
+    // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
   }
 
   if (keycode == (key_start | key_select | key_opt | key_edit)) {
