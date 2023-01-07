@@ -15,6 +15,8 @@ SDL_GameController *game_controllers[MAX_CONTROLLERS];
 
 // Bits for M8 input messages
 enum keycodes {
+  key_y = 1 << 9,
+  key_x = 1 << 8,
   key_left = 1 << 7,
   key_up = 1 << 6,
   key_down = 1 << 5,
@@ -29,7 +31,10 @@ uint8_t keyjazz_enabled = 0;
 uint8_t keyjazz_base_octave = 2;
 uint8_t keyjazz_velocity = 0x64;
 
-static uint8_t keycode = 0; // value of the pressed key
+int gamepad_keyjazz_key = -1;
+
+static uint16_t keycode = 0; // value of the pressed key
+static uint16_t prev_keycode = 0; // value of the pressed key
 static int num_joysticks = 0;
 
 input_msg_s key = {normal, 0};
@@ -275,10 +280,11 @@ static int get_game_controller_button(config_params_s *conf,
                                       SDL_GameController *controller,
                                       int button) {
 
-  const int button_mappings[8] = {conf->gamepad_up,     conf->gamepad_down,
+  const int button_mappings[10] = {conf->gamepad_up,     conf->gamepad_down,
                                   conf->gamepad_left,   conf->gamepad_right,
                                   conf->gamepad_opt,    conf->gamepad_edit,
-                                  conf->gamepad_select, conf->gamepad_start};
+                                  conf->gamepad_select, conf->gamepad_start,
+                                  conf->gamepad_x, conf->gamepad_y};
 
   // Check digital buttons
   if (SDL_GameControllerGetButton(controller, button_mappings[button])) {
@@ -329,10 +335,12 @@ static int get_game_controller_button(config_params_s *conf,
 // cycle
 static int handle_game_controller_buttons(config_params_s *conf) {
 
-  const int keycodes[8] = {key_up,  key_down, key_left,   key_right,
-                           key_opt, key_edit, key_select, key_start};
+  const int keycodes[10] = {key_up,  key_down, key_left,   key_right,
+                           key_opt, key_edit, key_select, key_start,
+                           key_x, key_y};
 
   int key = 0;
+
 
   // Cycle through every active game controller
   for (int gc = 0; gc < num_joysticks; gc++) {
@@ -356,6 +364,8 @@ void handle_sdl_events(config_params_s *conf) {
 
   SDL_Event event;
 
+  prev_keycode = keycode;
+
   // Read joysticks
   int key_analog = handle_game_controller_buttons(conf);
   if (prev_key_analog != key_analog) {
@@ -365,12 +375,12 @@ void handle_sdl_events(config_params_s *conf) {
 
   // Read special case game controller buttons quit and reset
   for (int gc = 0; gc < num_joysticks; gc++) {
-    if (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_quit) && 
-        (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_select) || 
+    if (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_quit) &&
+        (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_select) ||
         SDL_GameControllerGetAxis(game_controllers[gc], conf->gamepad_analog_axis_select)))
       key = (input_msg_s){special, msg_quit};
-    else if (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_reset) && 
-            (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_select) || 
+    else if (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_reset) &&
+            (SDL_GameControllerGetButton(game_controllers[gc], conf->gamepad_select) ||
               SDL_GameControllerGetAxis(game_controllers[gc], conf->gamepad_analog_axis_select)))
       key = (input_msg_s){special, msg_reset_display};
   }
@@ -394,7 +404,7 @@ void handle_sdl_events(config_params_s *conf) {
     if (event.window.event == SDL_WINDOWEVENT_RESIZED)
     {
       SDL_Log("Resizing window...");
-      key = (input_msg_s){special, msg_reset_display};      
+      key = (input_msg_s){special, msg_reset_display};
     }
     break;
 
@@ -455,12 +465,52 @@ void handle_sdl_events(config_params_s *conf) {
 }
 
 // Returns the currently pressed keys to main
+// TD: This runs in a loop so no concept of key down
 input_msg_s get_input_msg(config_params_s *conf) {
 
   key = (input_msg_s){normal, 0};
 
   // Query for SDL events
   handle_sdl_events(conf);
+
+  // static int prev_key_analog;
+
+  if (prev_keycode != keycode) {
+    switch(keycode) {
+      case key_left:
+        gamepad_keyjazz_key = keyjazz_base_octave * 12;
+        break;
+      case key_up:
+        gamepad_keyjazz_key = 2 + keyjazz_base_octave * 12;
+        break;
+      case key_down:
+        gamepad_keyjazz_key = 4 + keyjazz_base_octave * 12;
+        break;
+      case key_right:
+        gamepad_keyjazz_key = 5 + keyjazz_base_octave * 12;
+        break;
+      case key_x:
+        gamepad_keyjazz_key = 7 + keyjazz_base_octave * 12;
+        break;
+      case key_y:
+        gamepad_keyjazz_key = 9 + keyjazz_base_octave * 12;
+        break;
+      case key_edit:
+        gamepad_keyjazz_key = 11 + keyjazz_base_octave * 12;
+        break;
+      case key_opt:
+        gamepad_keyjazz_key = 12 + keyjazz_base_octave * 12;
+        break;
+      default:
+        break;
+    }
+
+    if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
+      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
+    } else {
+      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
+    }
+  }
 
   if (keycode == (key_start | key_select | key_opt | key_edit)) {
     key = (input_msg_s){special, msg_reset_display};

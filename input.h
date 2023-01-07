@@ -15,6 +15,8 @@ typedef enum input_buttons_t {
     INPUT_EDIT,
     INPUT_SELECT,
     INPUT_START,
+    INPUT_X,
+    INPUT_Y,
     INPUT_MAX
 } input_buttons_t;
 

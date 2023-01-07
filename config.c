@@ -53,6 +53,8 @@ config_params_s init_config() {
   c.gamepad_edit = SDL_CONTROLLER_BUTTON_A;
   c.gamepad_quit = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
   c.gamepad_reset = SDL_CONTROLLER_BUTTON_LEFTSTICK;
+  c.gamepad_x = SDL_CONTROLLER_BUTTON_X;
+  c.gamepad_y = SDL_CONTROLLER_BUTTON_Y;
 
   c.gamepad_analog_threshold = 32766;
   c.gamepad_analog_invert = 0;
@@ -77,7 +79,7 @@ void write_config(config_params_s *conf) {
 
   SDL_Log("Writing config file to %s", config_path);
 
-  const unsigned int INI_LINE_COUNT = 40;
+  const unsigned int INI_LINE_COUNT = 42;
   const unsigned int LINELEN = 50;
 
   // Entries for the config file
@@ -137,6 +139,10 @@ void write_config(config_params_s *conf) {
            conf->gamepad_quit);
   snprintf(ini_values[initPointer++], LINELEN, "gamepad_reset=%d\n",
            conf->gamepad_reset);
+  snprintf(ini_values[initPointer++], LINELEN, "gamepad_x=%d\n",
+           conf->gamepad_x);
+  snprintf(ini_values[initPointer++], LINELEN, "gamepad_y=%d\n",
+           conf->gamepad_y);
   snprintf(ini_values[initPointer++], LINELEN, "gamepad_analog_threshold=%d\n",
            conf->gamepad_analog_threshold);
   snprintf(ini_values[initPointer++], LINELEN, "gamepad_analog_invert=%s\n",
@@ -295,6 +301,8 @@ void read_gamepad_config(ini_t *ini, config_params_s *conf) {
   const char *gamepad_edit = ini_get(ini, "gamepad", "gamepad_edit");
   const char *gamepad_quit = ini_get(ini, "gamepad", "gamepad_quit");
   const char *gamepad_reset = ini_get(ini, "gamepad", "gamepad_reset");
+  const char *gamepad_x = ini_get(ini, "gamepad", "gamepad_x");
+  const char *gamepad_y = ini_get(ini, "gamepad", "gamepad_y");
   const char *gamepad_analog_threshold =
       ini_get(ini, "gamepad", "gamepad_analog_threshold");
   const char *gamepad_analog_invert =
@@ -332,6 +340,10 @@ void read_gamepad_config(ini_t *ini, config_params_s *conf) {
     conf->gamepad_quit = SDL_atoi(gamepad_quit);
   if (gamepad_reset)
     conf->gamepad_reset = SDL_atoi(gamepad_reset);
+  if (gamepad_x)
+    conf->gamepad_x = SDL_atoi(gamepad_x);
+  if (gamepad_y)
+    conf->gamepad_y = SDL_atoi(gamepad_y);
   if (gamepad_analog_threshold)
     conf->gamepad_analog_threshold = SDL_atoi(gamepad_analog_threshold);
 
