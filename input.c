@@ -3,6 +3,7 @@
 
 #include <SDL.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "config.h"
 #include "input.h"
@@ -32,7 +33,11 @@ uint8_t keyjazz_base_octave = 2;
 uint8_t keyjazz_velocity = 0x64;
 
 int gamepad_keyjazz_key = -1;
+bool gamepad_keyjazz_active = false;
+bool gamepad_keyjazz_shift_active = false;
+bool gamepad_keyjazz_key_active = false;
 
+// TODO this can just be unit8_t with proper packing
 static uint16_t keycode = 0; // value of the pressed key
 static uint16_t prev_keycode = 0; // value of the pressed key
 static int num_joysticks = 0;
@@ -286,6 +291,15 @@ static int get_game_controller_button(config_params_s *conf,
                                   conf->gamepad_select, conf->gamepad_start,
                                   conf->gamepad_x, conf->gamepad_y};
 
+  gamepad_keyjazz_shift_active = SDL_GameControllerGetButton(controller, 9);
+  gamepad_keyjazz_active = SDL_GameControllerGetButton(controller, 10);
+
+  for (int i = 0; i < 256; i++) {
+    if (SDL_GameControllerGetButton(controller, i)) {
+      // printf("%i\n", i);
+    }
+  }
+
   // Check digital buttons
   if (SDL_GameControllerGetButton(controller, button_mappings[button])) {
     return 1;
@@ -475,41 +489,61 @@ input_msg_s get_input_msg(config_params_s *conf) {
 
   // static int prev_key_analog;
 
-  if (prev_keycode != keycode) {
+  if (gamepad_keyjazz_active && prev_keycode != keycode) {
     switch(keycode) {
       case key_left:
-        gamepad_keyjazz_key = keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + keyjazz_base_octave * 12;
         break;
       case key_up:
-        gamepad_keyjazz_key = 2 + keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 2 + keyjazz_base_octave * 12;
         break;
       case key_down:
-        gamepad_keyjazz_key = 4 + keyjazz_base_octave * 12;
+        if (gamepad_keyjazz_shift_active) {
+          gamepad_keyjazz_key = -1;
+        } else {
+          gamepad_keyjazz_key = 4 + keyjazz_base_octave * 12;
+        }
         break;
       case key_right:
-        gamepad_keyjazz_key = 5 + keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 5 + keyjazz_base_octave * 12;
         break;
       case key_x:
-        gamepad_keyjazz_key = 7 + keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 7 + keyjazz_base_octave * 12;
         break;
       case key_y:
-        gamepad_keyjazz_key = 9 + keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 9 + keyjazz_base_octave * 12;
         break;
       case key_edit:
-        gamepad_keyjazz_key = 11 + keyjazz_base_octave * 12;
+        if (gamepad_keyjazz_shift_active) {
+          gamepad_keyjazz_key = -1;
+        } else {
+          gamepad_keyjazz_key = 11 + keyjazz_base_octave * 12;
+        }
         break;
       case key_opt:
-        gamepad_keyjazz_key = 12 + keyjazz_base_octave * 12;
+        gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 12 + keyjazz_base_octave * 12;
         break;
       default:
         break;
     }
 
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
+      gamepad_keyjazz_key_active = true;
       return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
+      gamepad_keyjazz_key_active = false;
       return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
     }
+  }
+
+  if (gamepad_keyjazz_active) {
+    return (input_msg_s){special, -1};
+  }
+
+  // Avoid stuck notes
+  if (gamepad_keyjazz_key_active) {
+    gamepad_keyjazz_key_active = false;
+    return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
   }
 
   if (keycode == (key_start | key_select | key_opt | key_edit)) {
