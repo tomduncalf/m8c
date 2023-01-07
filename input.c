@@ -47,7 +47,9 @@ input_msg_s key = {normal, 0};
 
 const char *port_name = "whatever";
 RtMidiOutPtr dev;
-int last_value = - 1;
+int last_values[2] = {- 1, -1};
+int current_midi_values[2] = {64, 64};
+int directions[2] = {0, 0};
 
 uint8_t toggle_input_keyjazz() {
   keyjazz_enabled = !keyjazz_enabled;
@@ -311,15 +313,51 @@ static int get_game_controller_button(config_params_s *conf,
   if (SDL_GameControllerGetButton(controller, button_mappings[button])) {
     return 1;
   } else {
-    unsigned int value = (0x8000 + SDL_GameControllerGetAxis(controller, conf->gamepad_analog_axis_updown)) / (0xffff / 0x80);
-    if (value == 128) value = 127;
-    value = 127 - value;
+    const int axes[2] = {conf->gamepad_analog_axis_updown, conf->gamepad_analog_axis_leftright};
+    for (int i = 0; i < 2; i++) {
+      unsigned int value = (0x8000 + SDL_GameControllerGetAxis(controller, axes[i])) / (0xffff / 0x80);
+      if (value == 128) value = 127;
+      if (i % 2 == 0) value = 127 - value;
 
-    if (value != last_value) {
-      last_value = value;
+      if (value != last_values[i]) {
+        printf("%i %i\n", i, value);
 
-      const unsigned char msg[3] = {0xB0, 0, value};
-      rtmidi_out_send_message(dev, msg, 3);
+        if (true) {
+          if (value >= 63 && value <= 65) {
+            // center zone
+            directions[i] = 0;
+          } else {
+            int difference = value - last_values[i];
+            last_values[i] = value;
+
+            printf("difference: %i, direction: %i\n", difference, directions[i]);
+
+            if (directions[i] == 0) {
+              directions[i] = difference > 0 ? 1 : -1;
+            }
+
+            if ((difference > 0 ? 1 : -1) == directions[i]) {
+              current_midi_values[i] += difference;
+              if (current_midi_values[i] < 0) {
+                current_midi_values[i] = 0;
+              } else if (current_midi_values[i] > 127) {
+                current_midi_values[i] = 127;
+              }
+
+              const unsigned char msg[3] = {0xB0, i, current_midi_values[i]};
+              rtmidi_out_send_message(dev, msg, 3);
+            }
+          }
+          // if (abs(difference) > 2) {
+          // }
+        } else {
+          printf("%i %i\n", i, value);
+          last_values[i] = value;
+
+          const unsigned char msg[3] = {0xB0, i, value};
+          rtmidi_out_send_message(dev, msg, 3);
+        }
+      }
     }
 
     // If digital button isn't pressed, check the corresponding analog control
