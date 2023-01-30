@@ -38,12 +38,12 @@ void close_serial_port(struct sp_port *port) {
 
 int main(int argc, char *argv[]) {
   RtMidiOutPtr dev = rtmidi_out_create_default();
-  printf("midi %i\n", rtmidi_get_port_count(dev));
+  printf("midi count %i\n", rtmidi_get_port_count(dev));
   for (int i = 0; i < rtmidi_get_port_count(dev); i++) {
     char name[100];
     int len = 100;
     rtmidi_get_port_name(dev, i, name, &len);
-    printf("midi %i %s\n", i, name);
+    printf("midi inteface %i = %s\n", i, name);
   }
 
   // Initialize the config to defaults read in the params from the

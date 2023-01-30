@@ -320,7 +320,7 @@ static int get_game_controller_button(config_params_s *conf,
       if (value == 128) value = 127;
       if (i % 2 == 0) value = 127 - value;
 
-      printf("%i %i\n", i, value);
+      // printf("%i %i\n", i, value);
 
       int mode = 0;
       if (mode == 0) {
@@ -331,7 +331,7 @@ static int get_game_controller_button(config_params_s *conf,
         } else {
           int difference = value - 64;
 
-          printf("difference: %i, direction: %i\n", difference, directions[i]);
+          // printf("difference: %i, direction: %i\n", difference, directions[i]);
 
           if (directions[i] == 0) {
             directions[i] = difference > 0 ? 1 : -1;
@@ -534,7 +534,12 @@ void handle_sdl_events(config_params_s *conf) {
 
     // ESC = toggle keyjazz
     if (event.key.keysym.sym == SDLK_ESCAPE) {
-      display_keyjazz_overlay(toggle_input_keyjazz(), keyjazz_base_octave, keyjazz_velocity);
+      // display_keyjazz_overlay(toggle_input_keyjazz(), keyjazz_base_octave, keyjazz_velocity);
+
+      const unsigned char msg[3] = {0x80, 0x40, 0xFF};
+      printf("send11\n");
+      rtmidi_out_send_message(dev, msg, 3);
+
     }
 
   // Normal keyboard inputs
@@ -632,13 +637,14 @@ input_msg_s get_input_msg(config_params_s *conf) {
 
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
       gamepad_keyjazz_key_active = true;
-      const unsigned char msg[3] = {0x90, gamepad_keyjazz_key, 0xFF};
+      const unsigned char msg[3] = {0x91, gamepad_keyjazz_key, 0xFF};
+      printf("send %i\n", gamepad_keyjazz_key);
       rtmidi_out_send_message(dev, msg, 3);
 
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
       gamepad_keyjazz_key_active = false;
-      const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
+      const unsigned char msg[3] = {0x81, gamepad_keyjazz_key, 0xFF};
       rtmidi_out_send_message(dev, msg, 3);
 
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
