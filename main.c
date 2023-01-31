@@ -188,6 +188,7 @@ int main(int argc, char *argv[]) {
             send_msg_keyjazz(port, input.value, input.value2);
             prev_note = input.value;
           } else if (input.eventType == SDL_KEYUP && input.value == prev_note) {
+            // send_msg_keyjazz(port, prev_note, 0);
             send_msg_keyjazz(port, 0xFF, 0);
           }
         }
