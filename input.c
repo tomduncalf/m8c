@@ -302,7 +302,14 @@ static int get_game_controller_button(config_params_s *conf,
                                   conf->gamepad_x, conf->gamepad_y};
 
   gamepad_keyjazz_shift_active = SDL_GameControllerGetButton(controller, 9);
+  bool was_active = false;
   gamepad_keyjazz_active = SDL_GameControllerGetButton(controller, 10);
+
+  // if (!was_active && gamepad_keyjazz_active) {
+  //   printf("yo\n");
+  //   const unsigned char msg[3] = {0xB0, 1, 0xff};
+  //   rtmidi_out_send_message(dev, msg, 3);
+  // }
 
   for (int i = 0; i < 256; i++) {
     if (SDL_GameControllerGetButton(controller, i)) {
@@ -534,12 +541,7 @@ void handle_sdl_events(config_params_s *conf) {
 
     // ESC = toggle keyjazz
     if (event.key.keysym.sym == SDLK_ESCAPE) {
-      // display_keyjazz_overlay(toggle_input_keyjazz(), keyjazz_base_octave, keyjazz_velocity);
-
-      const unsigned char msg[3] = {0x80, 0x40, 0xFF};
-      printf("send11\n");
-      rtmidi_out_send_message(dev, msg, 3);
-
+      display_keyjazz_overlay(toggle_input_keyjazz(), keyjazz_base_octave, keyjazz_velocity);
     }
 
   // Normal keyboard inputs
@@ -637,14 +639,19 @@ input_msg_s get_input_msg(config_params_s *conf) {
 
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
       gamepad_keyjazz_key_active = true;
-      const unsigned char msg[3] = {0x91, gamepad_keyjazz_key, 0xFF};
+      // const unsigned char msg[3] = {0x90, gamepad_keyjazz_key, 0xFF};
       printf("send %i\n", gamepad_keyjazz_key);
-      rtmidi_out_send_message(dev, msg, 3);
+      // rtmidi_out_send_message(dev, msg, 3);
+
+      RtMidiOutPtr dev1 = rtmidi_out_create_default();
+      rtmidi_open_port (dev1, 1, port_name);
+      const unsigned char msg[3] = {0x90, 0x3C, 0xFF};
+      rtmidi_out_send_message(dev1, msg, 3);
 
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
       gamepad_keyjazz_key_active = false;
-      const unsigned char msg[3] = {0x81, gamepad_keyjazz_key, 0xFF};
+      const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
       rtmidi_out_send_message(dev, msg, 3);
 
       // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
