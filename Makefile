@@ -25,7 +25,7 @@ EXTENSION = .c
 #Combine them into the output file
 #Set your desired exe output file name here
 m8c: $(OBJ)
-	$(CC) -o $@ $^ $(local_CFLAGS) $(INCLUDES)
+	LD_RUN_PATH=/usr/local/lib $(CC) -o $@ $^ $(local_CFLAGS) $(INCLUDES)
 
 font.c: inline_font.h
 	@echo "#include <SDL.h>" > $@-tmp1
