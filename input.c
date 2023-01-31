@@ -589,6 +589,8 @@ input_msg_s get_input_msg(config_params_s *conf) {
 
   // static int prev_key_analog;
 
+  gamepad_keyjazz_key = -1;
+
   if (gamepad_keyjazz_active && prev_keycode != keycode) {
     switch(keycode) {
       case key_left:
@@ -607,20 +609,20 @@ input_msg_s get_input_msg(config_params_s *conf) {
       case key_right:
         gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 5 + keyjazz_base_octave * 12;
         break;
-      case key_x:
+      case key_y:
         gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 7 + keyjazz_base_octave * 12;
         break;
-      case key_y:
+      case key_x:
         gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 9 + keyjazz_base_octave * 12;
         break;
-      case key_edit:
+      case key_opt:
         if (gamepad_keyjazz_shift_active) {
           gamepad_keyjazz_key = -1;
         } else {
           gamepad_keyjazz_key = 11 + keyjazz_base_octave * 12;
         }
         break;
-      case key_opt:
+      case key_edit:
         gamepad_keyjazz_key = (gamepad_keyjazz_shift_active ? 1 : 0) + 12 + keyjazz_base_octave * 12;
         break;
       case key_select:
@@ -640,21 +642,21 @@ input_msg_s get_input_msg(config_params_s *conf) {
     if (prev_keycode == 0 && gamepad_keyjazz_key != -1) {
       gamepad_keyjazz_key_active = true;
       // const unsigned char msg[3] = {0x90, gamepad_keyjazz_key, 0xFF};
-      printf("send %i\n", gamepad_keyjazz_key);
+      // printf("send %i\n", gamepad_keyjazz_key);
       // rtmidi_out_send_message(dev, msg, 3);
 
-      RtMidiOutPtr dev1 = rtmidi_out_create_default();
-      rtmidi_open_port (dev1, 1, port_name);
-      const unsigned char msg[3] = {0x90, 0x3C, 0xFF};
-      rtmidi_out_send_message(dev1, msg, 3);
+      // RtMidiOutPtr dev1 = rtmidi_out_create_default();
+      // rtmidi_open_port (dev1, 1, port_name);
+      // const unsigned char msg[3] = {0x90, 0x3C, 0xFF};
+      // rtmidi_out_send_message(dev1, msg, 3);
 
-      // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
+      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYDOWN};
     } else {
-      gamepad_keyjazz_key_active = false;
-      const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
-      rtmidi_out_send_message(dev, msg, 3);
+      // gamepad_keyjazz_key_active = false;
+      // const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
+      // rtmidi_out_send_message(dev, msg, 3);
 
-      // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
+      return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
     }
     return (input_msg_s){special, -1};
   }
@@ -665,11 +667,11 @@ input_msg_s get_input_msg(config_params_s *conf) {
 
   // Avoid stuck notes
   if (gamepad_keyjazz_key_active) {
-    gamepad_keyjazz_key_active = false;
-    const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
-    rtmidi_out_send_message(dev, msg, 3);
+    // gamepad_keyjazz_key_active = false;
+    // const unsigned char msg[3] = {0x80, gamepad_keyjazz_key, 0xFF};
+    // rtmidi_out_send_message(dev, msg, 3);
 
-    // return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
+    return (input_msg_s){keyjazz, gamepad_keyjazz_key, keyjazz_velocity, SDL_KEYUP};
   }
 
   if (keycode == (key_start | key_select | key_opt | key_edit)) {
