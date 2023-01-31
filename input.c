@@ -405,7 +405,8 @@ static int get_game_controller_button(config_params_s *conf,
     }
 
     // If digital button isn't pressed, check the corresponding analog control
-    // switch (button) {
+    switch (button) {
+    // Disabled due to stick midi
     // case INPUT_UP:
     //   return SDL_GameControllerGetAxis(controller,
     //                                    conf->gamepad_analog_axis_updown) <
@@ -422,25 +423,25 @@ static int get_game_controller_button(config_params_s *conf,
     //   return SDL_GameControllerGetAxis(controller,
     //                                    conf->gamepad_analog_axis_leftright) >
     //          conf->gamepad_analog_threshold;
-    // case INPUT_OPT:
-    //   return SDL_GameControllerGetAxis(controller,
-    //                                    conf->gamepad_analog_axis_opt) >
-    //          conf->gamepad_analog_threshold;
-    // case INPUT_EDIT:
-    //   return SDL_GameControllerGetAxis(controller,
-    //                                    conf->gamepad_analog_axis_edit) >
-    //          conf->gamepad_analog_threshold;
-    // case INPUT_SELECT:
-    //   return SDL_GameControllerGetAxis(controller,
-    //                                    conf->gamepad_analog_axis_select) >
-    //          conf->gamepad_analog_threshold;
-    // case INPUT_START:
-    //   return SDL_GameControllerGetAxis(controller,
-    //                                    conf->gamepad_analog_axis_start) >
-    //          conf->gamepad_analog_threshold;
-    // default:
-    //   return 0;
-    // }
+    case INPUT_OPT:
+      return SDL_GameControllerGetAxis(controller,
+                                       conf->gamepad_analog_axis_opt) >
+             conf->gamepad_analog_threshold;
+    case INPUT_EDIT:
+      return SDL_GameControllerGetAxis(controller,
+                                       conf->gamepad_analog_axis_edit) >
+             conf->gamepad_analog_threshold;
+    case INPUT_SELECT:
+      return SDL_GameControllerGetAxis(controller,
+                                       conf->gamepad_analog_axis_select) >
+             conf->gamepad_analog_threshold;
+    case INPUT_START:
+      return SDL_GameControllerGetAxis(controller,
+                                       conf->gamepad_analog_axis_start) >
+             conf->gamepad_analog_threshold;
+    default:
+      return 0;
+    }
   }
   return 0;
 }
